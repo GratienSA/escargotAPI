@@ -1,8 +1,9 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react";
+import React from "react";
+import DeleteDialog from "@/components/shared/delete-dialog";
+import Pagination from "@/components/shared/pagination";
 import { Button } from "@/components/ui/button";
-import Link from "next/link";
 import {
   Table,
   TableBody,
@@ -11,101 +12,90 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { MoreVertical } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { DeleteProduct } from "@/components/admin/DeleteProduct";
 import { getAllProducts } from "@/helpers/getData";
-import { PageHeader } from "@/components/admin/Header";
-import { ProductType } from "@/utils/types";
+import { deleteProduct } from "@/helpers/PostUpadateDeleteProducts";
+import Link from "next/link";
+import { formatCurrency, ProductType } from "@/utils/types";
 
+export default async function AdminProductsPage({
+  searchParams,
+}: {
+  searchParams: {
+    page: string;
+    query: string;
+    category: string;
+  };
+}) {
+  const page = Number(searchParams.page) || 1;
+  const searchText = searchParams.query || "";
+  const category = searchParams.category || "";
 
-export default function AdminProductsPage() {
-  const [products, setProducts] = useState<ProductType[]>([]);
+  let products;
 
-  useEffect(() => {
-    async function fetchProducts() {
-      try {
-        const data = await getAllProducts();
-        setProducts(data);
-      } catch (error) {
-        console.error("Failed to fetch products:", error);
-      }
-    }
-
-    fetchProducts();
-  }, []);
+  try {
+    products = await getAllProducts({
+      query: searchText,
+      category,
+      skip: (page - 1) * 24,
+      limit: 24,
+    });
+  } catch (error) {
+    console.error("Erreur lors de la récupération des produits:", error);
+    products = { data: [], totalPages: 0 };
+  }
 
   return (
-    <>
-      <div className="flex justify-between items-center gap-4">
-        <PageHeader>Products</PageHeader>
-        <Button asChild>
-          <Link href="/admin/products/AddProduct">Add Product</Link>
+    <div className="space-y-2">
+      <div className="flex-between">
+        <h1 className="h2-bold">Produits</h1>
+        <Button asChild variant="default">
+          <Link href="/admin/products/create">Créer un produit</Link>
         </Button>
       </div>
-      <ProductsTable products={products} />
-    </>
-  );
-}
-
-function ProductsTable({ products }: { products: ProductType[] }) {
-  if (products.length === 0) return <p>No products found</p>;
-
-  return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Name</TableHead>
-          <TableHead>Price</TableHead>
-          <TableHead>Category</TableHead>
-          <TableHead>Created At</TableHead>
-          <TableHead>Updated At</TableHead>
-          <TableHead className="w-0">
-            <span className="sr-only">Actions</span>
-          </TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {products.map((product) => (
-          <TableRow key={product.id}>
-            <TableCell>{product.name}</TableCell>
-            <TableCell>{(product.price)}</TableCell>
-            <TableCell>{product.category.name}</TableCell>
-            <TableCell>{new Date(product.createdAt).toLocaleDateString()}</TableCell>
-            <TableCell>{new Date(product.updatedAt).toLocaleDateString()}</TableCell>
-            <TableCell>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="h-8 w-8 p-0">
-                    <MoreVertical className="h-4 w-4" />
-                    <span className="sr-only">Open menu</span>
+      <div>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>ID</TableHead>
+              <TableHead>NOM</TableHead>
+              <TableHead className="text-right">PRIX</TableHead>
+              <TableHead>CATEGORIE</TableHead>
+              <TableHead>STOCK</TableHead>
+              <TableHead>NOTE</TableHead>
+              <TableHead className="w-[100px]">ACTIONS</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {products?.data.map((product: ProductType) => (
+              <TableRow key={product.id}>
+                <TableCell>{String(product.id)}</TableCell>
+                <TableCell>{String(product.name)}</TableCell>
+                <TableCell className="text-right">
+                  {formatCurrency(product.price)}
+                </TableCell>
+                {/* Vérifiez si product.category est une chaîne ou un objet */}
+                <TableCell>{typeof product.category === 'string' ? product.category : 'N/A'}</TableCell> 
+                {/* Vérifiez si inventory est défini et accédez à quantity */}
+                <TableCell>{typeof product.inventory === 'number' ? product.inventory : '0'}</TableCell> 
+                {/* Affichage de la note */}
+                <TableCell>{product.averageRating?.toFixed(1) || "N/A"}</TableCell>
+                <TableCell className="flex gap-1">
+                  <Button asChild variant="outline" size="sm">
+                    <Link href={`/admin/products/edit/${product.id}`}>
+                      Modifier
+                    </Link>
                   </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem asChild>
-                    <Link href={`/admin/products/${product.id}`}>
-                      View Details
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href={`/admin/products/${product.id}/edit`}>
-                      Edit
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DeleteProduct product={product} />
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </TableCell>
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+                  <DeleteDialog id={product.id} action={deleteProduct} />
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+
+        {products && products.totalPages > 1 && (
+          <Pagination page={page} totalPages={products.totalPages} />
+        )}
+      </div>
+    </div>
   );
 }

@@ -1,6 +1,8 @@
 import { create } from 'zustand';
-import { CartState, ProductType, UserType, OrderType } from '@/utils/types';
+import { CartState, ProductType, CartProductWithQuantity, UserType, OrderType } from '@/utils/types';
+import Decimal from 'decimal.js';  // Importation de decimal.js
 
+// Initial state
 const initialState: CartState = {
   products: [],
   favorites: [],
@@ -8,6 +10,7 @@ const initialState: CartState = {
   orders: [],
 };
 
+// Main store for cart, favorites, user, and orders
 export const useStore = create<CartState & {
   addToCart: (product: ProductType) => void;
   removeFromCart: (productId: number) => void;
@@ -21,20 +24,27 @@ export const useStore = create<CartState & {
 }>((set, get) => ({
   ...initialState,
 
+  // Add product to cart
   addToCart: (product) => set((state) => {
     const existingProductIndex = state.products.findIndex(item => item.product.id === product.id);
     if (existingProductIndex !== -1) {
       const updatedProducts = [...state.products];
-      updatedProducts[existingProductIndex].quantity += 1;
-      return { products: updatedProducts };
+      updatedProducts[existingProductIndex].quantity += 1; // Increment quantity
+      return { ...state, products: updatedProducts };
     }
-    return { products: [...state.products, { product, quantity: 1 }] };
+  
+    // Add new product with price as number
+    const newProduct: CartProductWithQuantity = { product: { ...product }, quantity: 1 };
+    return { ...state, products: [...state.products, newProduct] };
   }),
+  
 
+  // Remove product from cart
   removeFromCart: (productId) => set((state) => ({
     products: state.products.filter(item => item.product.id !== productId),
   })),
 
+  // Update product quantity
   updateQuantity: (productId, quantity) => {
     const state = get();
     const productIndex = state.products.findIndex(item => item.product.id === productId);
@@ -49,8 +59,10 @@ export const useStore = create<CartState & {
     return false;
   },
 
+  // Clear cart
   clearCart: () => set({ products: [] }),
 
+  // Toggle favorite
   toggleFavorite: (product) => set((state) => {
     const isFavorite = state.favorites.some(item => item.id === product.id);
     return {
@@ -60,14 +72,18 @@ export const useStore = create<CartState & {
     };
   }),
 
+  // Clear favorites
   clearFavorites: () => set({ favorites: [] }),
 
+  // Set user
   setUser: (user) => set({ user }),
 
+  // Add new order
   addOrder: (order) => set((state) => ({
     orders: [...state.orders, order],
   })),
 
+  // Update order status
   updateOrderStatus: (orderId, status) => set((state) => ({
     orders: state.orders.map(order =>
       order.id === orderId ? { ...order, status } : order
@@ -75,7 +91,7 @@ export const useStore = create<CartState & {
   })),
 }));
 
-
+// Search store
 type SearchResult = {
   products: any[];
   totalCount: number;

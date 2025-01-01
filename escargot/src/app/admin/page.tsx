@@ -1,104 +1,158 @@
-"use client"
+// DashboardPage.tsx
+"use client"; // Indique que ce composant est un Client Component
+
+import { useEffect, useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { BadgeDollarSign, Barcode, CreditCard, Users } from 'lucide-react';
+import { deleteOrder, getOrderSummary } from '@/helpers/getData';
 
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
-import { useEffect, useState } from "react"
-import { toast } from "react-hot-toast"
-import { getAllProducts, getCategories, getOrderHistory } from "@/helpers/getData"
-import { OrderType } from "@/utils/types" 
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import Link from 'next/link';
+import { formatCurrency, formatDateTime, formatNumber, OrderType } from '@/utils/types';
+import DeleteDialog from '@/components/shared/delete-dialog';
+import Charts from './overview/charts';
 
-export default function AdminDashboard() {
-  const [salesData, setSalesData] = useState({ amount: 0, numberOfSales: 0 })
-  const [userData, setUserData] = useState({ userCount: 0, averageValuePerUser: 0 })
-  const [productData, setProductData] = useState({ totalCount: 0, categoryCount: 0 })
-  const [isLoading, setIsLoading] = useState(true)
+export default function DashboardPage() {
+  const [summary, setSummary] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    async function fetchData() {
-      setIsLoading(true)
+    const fetchData = async () => {
       try {
-        const [products, categories, orders] = await Promise.all([
-          getAllProducts(),
-          getCategories(),
-          getOrderHistory(),
-        ])
-
-        const totalSales = orders.reduce((sum: number, order: OrderType) => sum + (order.total || 0), 0)
-        setSalesData({
-          amount: totalSales,
-          numberOfSales: orders.length,
-        })
-
-        
-        const uniqueUsers = new Set(orders.map((order: OrderType) => order.userId))
-        setUserData({
-          userCount: uniqueUsers.size,
-          averageValuePerUser: uniqueUsers.size > 0 ? totalSales / uniqueUsers.size : 0,
-        })
-
-        
-        setProductData({
-          totalCount: products.length,
-          categoryCount: categories.length,
-        })
-
-      } catch (error) {
-        console.error('Error fetching dashboard data:', error)
-        toast.error('Failed to load dashboard data')
+        // Fetch the order summary on the server side
+        const data = await getOrderSummary();
+        setSummary(data);
+      } catch (err) {
+        console.error("Erreur lors de la récupération du résumé des commandes:", err);
+        setError("Erreur lors de la récupération du résumé des commandes");
       } finally {
-        setIsLoading(false)
+        setLoading(false);
       }
-    }
+    };
 
-    fetchData()
-  }, [])
+    fetchData();
+  }, []);
 
-  if (isLoading) {
-    return <p>Loading dashboard data...</p>
-  }
+  if (loading) return <div>Chargement...</div>;
+  if (error) return <div>{error}</div>;
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      <DashboardCard
-        title="Sales"
-        subtitle={`${salesData.numberOfSales} Orders`}
-        body={salesData.amount.toFixed(2)}
-      />
-      <DashboardCard
-        title="Customers"
-        subtitle={`${userData.averageValuePerUser.toFixed(2)} Average Value`}
-        body={userData.userCount.toString()}
-      />
-      <DashboardCard
-        title="Products"
-        subtitle=""
-        body={productData.totalCount.toString()}
-      />
+    <div className="space-y-4">
+      <h1 className="h2-bold">Tableau de bord</h1>
+
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Revenu total</CardTitle>
+            <BadgeDollarSign />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {formatCurrency(summary.ordersPrice || 0)}
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Ventes</CardTitle>
+            <CreditCard />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {formatNumber(summary.ordersCount || 0)}
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Clients</CardTitle>
+            <Users />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {summary.usersCount || 0}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Produits</CardTitle>
+            <Barcode />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {summary.productsCount || 0}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+        <Card className="col-span-4">
+          <CardHeader>
+            <CardTitle>Graphique des ventes</CardTitle>
+          </CardHeader>
+          <CardContent className="pl-2">
+            <Charts
+              data={{
+                salesData: summary.salesData,
+              }}
+            />
+          </CardContent>
+        </Card>
+
+        {/* Section pour les ventes récentes */}
+        <Card className="col-span-3">
+          <CardHeader>
+            <CardTitle>Ventes récentes</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {/* Table pour afficher les ventes récentes */}
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Acheteur</TableHead>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Total</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {summary.latestOrders.map((order: OrderType) => (
+                  <TableRow key={order.id}>
+                    {/* Affichage des détails de la commande */}
+                    <TableCell>{order.userId ? order.userId : 'Utilisateur supprimé'}</TableCell>
+
+                    <TableCell>{formatDateTime(order.createdAt).dateOnly}</TableCell>
+
+                    <TableCell>{formatCurrency(order.totalAmount)}</TableCell>
+
+                    {/* Lien vers les détails de la commande */}
+                    <TableCell>
+                      <Link href={`/order/${order.id}`}>
+                        <span className="px-2">Détails</span>
+                      </Link>
+                      {/* Delete dialog for removing orders */}
+                      <DeleteDialog id={order.id} action={() => deleteOrder(order.id)} />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+
+      </div>
+
     </div>
-  )
-}
-
-type DashboardCardProps = {
-  title: string
-  subtitle: string
-  body: string
-}
-
-function DashboardCard({ title, subtitle, body }: DashboardCardProps) {
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{title}</CardTitle>
-        <CardDescription>{subtitle}</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <p>{body}</p>
-      </CardContent>
-    </Card>
-  )
+  );
 }

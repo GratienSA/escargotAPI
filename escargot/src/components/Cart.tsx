@@ -5,183 +5,433 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useStore } from "@/stores/store";
-import FormattedPrice from "./FormatedPrice";
 import { loadStripe } from "@stripe/stripe-js";
+import { createOrder } from "@/helpers/getData";
+import { jwtDecode } from "jwt-decode";
+import FormattedPrice from "./FormatedPrice";
+import { CreateOrderDto } from "@/utils/types";
+import { Trash2 } from "lucide-react";
+// Définition de l'énumération pour les méthodes de paiement
+enum PaymentMethod {
+  CASH = "CASH",
+  stripe = "stripe",
+}
 
 const Cart = () => {
-  const [totalAmt, setTotalAmt] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const { products, removeFromCart, updateQuantity, clearCart } = useStore();
   const router = useRouter();
 
-  const stripePromise = useMemo(() => loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!), []);
+  const stripePromise = useMemo(
+    () => loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!),
+    []
+  );
+
+  const [shippingStreet, setShippingStreet] = useState<string | null>(null);
+  const [shippingCity, setShippingCity] = useState<string | null>(null);
+  const [shippingZip, setShippingZip] = useState<string | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(
+    PaymentMethod.stripe
+  );
+
+  const handleShippingStreetChange = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    setShippingStreet(e.target.value);
+  };
+
+  const handleShippingCityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setShippingCity(e.target.value);
+  };
+
+  const handleShippingZipChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setShippingZip(e.target.value);
+  };
+
+  const handlePaymentMethodChange = (
+    e: React.ChangeEvent<HTMLSelectElement>
+  ) => {
+    setPaymentMethod(e.target.value as PaymentMethod);
+  };
+
+  const obtenirUrlImage = (imagePath: string) => {
+    if (!imagePath) return "/placeholder.jpg";
+    return imagePath.startsWith("http")
+      ? imagePath
+      : `https://res.cloudinary.com/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload/${imagePath}`;
+  };
+
+  const totalAmt = useMemo(() => {
+    return products.reduce(
+      (acc, item) => acc + Number(item.product.price) * item.quantity,
+      0
+    );
+  }, [products]);
 
   const handleReset = () => {
-    const confirmReset = window.confirm("Are you sure you want to reset your cart?");
+    const confirmReset = window.confirm(
+      "Êtes-vous sûr de vouloir vider votre panier ?"
+    );
     if (confirmReset) {
       clearCart();
-      toast.success("Cart successfully reset");
+      toast.success("Panier vidé avec succès");
       router.push("/");
     }
   };
 
-  useEffect(() => {
-    if (products) {
-      const amt = products.reduce((acc, item) => acc + item.product.price * item.quantity, 0);
-      setTotalAmt(amt);
-    }
-  }, [products]);
-
-  if (!products) {
-    return <div>Loading...</div>;
-  }
-
-
   const handleCheckout = async () => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      toast.error("Vous devez être connecté pour procéder au paiement.");
+      return;
+    }
+
     setIsLoading(true);
     try {
-      const response = await fetch('/api/checkout', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-        body: JSON.stringify({
-          items: products.map(item => ({
-            name: item.product.name,
-            image: item.product.imagePath,
-            price: item.product.price,
-            quantity: item.quantity,
-          })),
-          userId: localStorage.getItem('userId'),
-          success_url: `${process.env.NEXT_PUBLIC_SERVER_URL}/success`,
-          cancel_url: `${process.env.NEXT_PUBLIC_SERVER_URL}/cart`,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Network response was not ok');
+      // Validation des champs requis
+      if (
+        !shippingStreet ||
+        !shippingCity ||
+        !shippingZip ||
+        !products.length
+      ) {
+        throw new Error("Veuillez remplir tous les champs requis");
       }
 
-      const { sessionId } = await response.json();
+      // Calcul des prix
+      const itemsPrice = products.reduce(
+        (sum, item) => sum + item.product.price * item.quantity,
+        0
+      );
+      const taxPrice = itemsPrice * 0.2;
+      const shippingPrice = 5;
+      const totalAmount = itemsPrice + taxPrice + shippingPrice;
 
-     
+      // Préparation des données de commande
+      const orderData: CreateOrderDto = {
+        userId: getUserIdFromToken(token),
+        shippingStreet,
+        shippingCity,
+        shippingZip,
+        paymentMethod,
+        orderItems: products.map((item) => ({
+          productId: item.product.id,
+          quantity: item.quantity,
+          price: item.product.price,
+          name: item.product.name,
+        })),
+        itemsPrice,
+        shippingPrice,
+        taxPrice,
+        totalAmount,
+        successUrl: `${window.location.origin}/success`,
+        cancelUrl: `${window.location.origin}/cart`,
+      };
+
+      // Création de la commande
+      const orderResponse = await createOrder(orderData);
+      console.log("Réponse de la commande:", orderResponse); // Ajouter ce log pour vérifier la réponse
+
+      if (!orderResponse?.sessionId) {
+        throw new Error(
+          "Erreur lors de la création de la session de paiement."
+        );
+      }
+
+      const { sessionId } = orderResponse;
+
+      // Redirection vers Stripe Checkout
       const stripe = await stripePromise;
-      const { error } = await stripe.redirectToCheckout({ sessionId });
-
-      if (error) {
-        throw error;
+      if (!stripe) {
+        throw new Error("Erreur d'initialisation de Stripe");
       }
-    } catch (error) {
-      console.error('Checkout error:', error);
 
+      const { error } = await stripe.redirectToCheckout({ sessionId });
+      if (error) {
+        console.error(
+          "Erreur lors de la redirection vers Stripe Checkout :",
+          error
+        );
+        toast.error("Erreur lors de la redirection vers Stripe. Réessayez.");
+      }
+    } catch (error: unknown) {
+      console.error("Erreur lors du paiement :", error);
+      toast.error(error instanceof Error ? error.message : "Erreur inconnue");
     } finally {
       setIsLoading(false);
     }
   };
+
+  // Fonction pour décoder le token et récupérer l'ID utilisateur
+  function getUserIdFromToken(token: string): number | null {
+    try {
+      console.log("Token reçu :", token); // Affichez le token brut pour vérifier sa validité
+
+      if (!token || token.split(".").length !== 3) {
+        console.error("Token mal formé");
+        return null;
+      }
+
+      const decoded: any = jwtDecode(token);
+      console.log("Payload décodé :", decoded); // Affichez le contenu décodé du token
+
+      const userId = decoded?.sub ? parseInt(decoded.sub, 10) : null;
+      console.log("ID utilisateur extrait :", userId); // Affichez l'ID utilisateur extrait
+
+      // Vérifiez si userId est un nombre valide
+      if (userId !== null && isNaN(userId)) {
+        console.error("Le champ `sub` du token n'est pas un nombre valide.");
+        return null;
+      }
+
+      return userId;
+    } catch (error) {
+      console.error("Erreur lors du décodage du token:", error);
+      return null;
+    }
+  }
+
+  const handleQuantityChange = (id: number, newQuantity: number) => {
+    if (newQuantity < 1) {
+      toast.error("Impossible de descendre en dessous de 1");
+      return;
+    }
+
+    const success = updateQuantity(id, newQuantity);
+    success
+      ? toast.success(`Quantité mise à jour avec succès !`)
+      : toast.error("Échec de la mise à jour de la quantité");
+  };
+
+  if (!products) {
+    return <div>Chargement...</div>;
+  }
+
   return (
-    <>
+    <div
+      className="container mx-auto px-4 py-8"
+      style={{ backgroundColor: "var(--color-tertiary)" }}
+    >
+      <h1
+        className="text-3xl font-bold mb-8"
+        style={{ color: "var(--color-primary)" }}
+      >
+        Votre Panier
+      </h1>
+
       {products.length > 0 ? (
-        <div className="mt-5 flex flex-col">
-          <div className="relative overflow-x-auto shadow-md sm:rounded-lg">
-            <table className="w-full text-sm text-left">
-              <thead className="text-xs text-white uppercase bg-green-800">
-                <tr>
-                  <th scope="col" className="px-6 py-3">Product Information</th>
-                  <th scope="col" className="px-6 py-3">Unit Price</th>
-                  <th scope="col" className="px-6 py-3">Quantity</th>
-                  <th scope="col" className="px-6 py-3">Subtotal</th>
-                </tr>
-              </thead>
-              {products.map((item) => (
-                <tbody key={item.product.id}>
-                  <tr className="bg-white border-b-[1px] border-b-green-200">
-                    <th scope="row" className="px-6 py-4 flex items-center gap-3">
-                      <X
-                        onClick={() => {
-                          removeFromCart(item.product.id);
-                          toast.success(`${item.product.name} has been removed from the cart!`);
-                        }}
-                        className="w-4 h-4 hover:text-red-600 cursor-pointer duration-200"
-                      />
-                      <Image
-                        src={`${process.env.NEXT_PUBLIC_NEST_API_URL}/${item.product.imagePath}`}
-                        alt="product image"
-                        width={500}
-                        height={500}
-                        className="w-24 object-contain"
-                      />
-                      <p className="text-base font-medium text-black">
-                        {item.product.name}
-                      </p>
-                    </th>
-                    <td className="px-6 py-4">
-                      <FormattedPrice amount={item.product.price} />
-                    </td>
-                    <td className="px-6 py-4 flex items-center gap-4">
-                      <span className="border border-green-300 p-1 rounded-md hover:border-green-800 cursor-pointer duration-200 inline-flex items-center justify-center">
-                        <Minus
-                          onClick={() => {
-                            if (item.quantity > 1) {
-                              const success = updateQuantity(item.product.id, item.quantity - 1);
-                              success ? toast.success("Quantity successfully decreased!") : toast.error("Failed to update quantity");
-                            } else {
-                              toast.error("Cannot decrease below 1");
-                            }
-                          }}
-                          className="w-4 h-4"
-                        />
-                      </span>
-                      <span className="font-semibold">{item.quantity}</span>
-                      <span className="border border-green-300 p-1 rounded-md hover:border-green-800 cursor-pointer duration-200 inline-flex items-center justify-center">
-                        <Plus
-                          onClick={() => {
-                            const success = updateQuantity(item.product.id, item.quantity + 1);
-                            success ? toast.success(`Quantity of ${item.product.name} increased`) : toast.error("Failed to update quantity");
-                          }}
-                          className="w-4 h-4"
-                        />
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <FormattedPrice amount={item.product.price * item.quantity} />
-                    </td>
+        <div className="flex flex-col lg:flex-row gap-8">
+          <div className="lg:w-2/3">
+            <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left pb-4">Produit</th>
+                    <th className="text-center pb-4">Prix</th>
+                    <th className="text-center pb-4">Quantité</th>
+                    <th className="text-right pb-4">Total</th>
                   </tr>
+                </thead>
+                <tbody>
+                  {products.map((item) => (
+                    <tr key={item.product.id} className="border-b">
+                      <td className="py-4">
+                        <div className="flex items-center space-x-4">
+                          <Image
+                            src={obtenirUrlImage(item.product.imagePath)}
+                            alt={item.product.name}
+                            width={64}
+                            height={64}
+                            className="rounded-md"
+                          />
+                          <div>
+                            <h3 className="font-semibold">
+                              {item.product.name}
+                            </h3>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-4 text-center">
+                        <FormattedPrice price={item.product.price} />
+                      </td>
+                      <td className="py-4">
+                      <div className="flex items-center justify-center">
+  <button
+    onClick={() => handleQuantityChange(item.product.id, item.quantity - 1)}
+    className="bg-gray-200 text-gray-600 hover:bg-gray-300 p-1 rounded-full focus:outline-none focus:ring-2 focus:ring-gray-400"
+  >
+    <Minus size={16} />
+  </button>
+  <span className="text-gray-700 mx-2 font-medium">
+    {item.quantity}
+  </span>
+  <button
+    onClick={() => handleQuantityChange(item.product.id, item.quantity + 1)}
+    className="bg-gray-200 text-gray-600 hover:bg-gray-300 p-1 rounded-full focus:outline-none focus:ring-2 focus:ring-gray-400"
+  >
+    <Plus size={16} />
+  </button>
+</div>
+
+                      </td>
+                      <td className="py-4 text-right">
+  <div className="flex items-center justify-end">
+    <FormattedPrice price={item.product.price * item.quantity} />
+    <button
+      onClick={() => removeFromCart(item.product.id)}
+      className="ml-2 text-red-500 hover:text-red-700 focus:outline-none"
+    >
+      <Trash2 size={18} />
+    </button>
+  </div>
+</td>
+
+                    </tr>
+                  ))}
                 </tbody>
-              ))}
-            </table>
+              </table>
+            </div>
           </div>
-          <button
-            onClick={handleReset}
-            className="bg-green-800 text-white w-36 py-3 mt-5 rounded-md uppercase text-xs font-semibold hover:bg-red-700 hover:text-white duration-200"
-          >
-            Clear Cart
-          </button>
-          <div className="mt-4 bg-white max-w-xl p-4 flex flex-col gap-1">
-            <p className="border-b-[1px] border-b-green-800 py-1">Cart Summary</p>
-            <p className="flex items-center justify-between">Total items <span>{products.length}</span></p>
-            <p className="flex items-center justify-between">Total price <span><FormattedPrice amount={totalAmt} /></span></p>
-            <button 
-              onClick={handleCheckout} 
-              disabled={isLoading}
-              className={`bg-green-800 text-white w-full my-2 py-2 uppercase text-center rounded-md font-semibold hover:bg-green-900 hover:text-white duration-200 ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
-            >
-              {isLoading ? "Processing..." : "Proceed to Checkout"}
-            </button>
+
+          {/* Résumé de la commande */}
+          <div className="lg:w-1/3">
+            <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+              <h2
+                className="text-lg font-semibold mb-4"
+                style={{ color: "var(--color-primary)" }}
+              >
+                Résumé de la commande
+              </h2>
+              <div className="flex justify-between mb-2">
+                <span>Sous-total</span>
+                <FormattedPrice price={totalAmt} />
+              </div>
+              <div className="flex justify-between mb-2">
+                <span>Frais de livraison</span>
+                <span>Gratuit</span>
+              </div>
+              <hr className="my-2" />
+              <div className="flex justify-between mb-2">
+                <span className="font-semibold">Total</span>
+                <FormattedPrice price={totalAmt} className="font-semibold" />
+              </div>
+
+              {/* Boutons d'action */}
+              <button
+                onClick={handleCheckout}
+                disabled={isLoading}
+                style={{ backgroundColor: "var(--color-secondary)" }} // Utilisation de la variable CSS
+                className={`w-full mt-4 py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white hover:bg-yellow-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 ${
+                  isLoading ? "opacity-50 cursor-not-allowed" : ""
+                }`}
+              >
+                {isLoading ? "Chargement..." : "Passer à la caisse"}
+              </button>
+
+              {/* Bouton pour vider le panier */}
+              <button
+                onClick={handleReset}
+                className="w-full mt-2 py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              >
+                Vider le panier
+              </button>
+            </div>
+
+            {/* Informations de livraison */}
+            <div className="bg-white rounded-lg shadow-md p-6 mt-6">
+              <h2
+                className="text-lg font-semibold mb-4"
+                style={{ color: "var(--color-primary)" }}
+              >
+                Informations de livraison
+              </h2>
+              <div className="space-y-4">
+                {/* Rue */}
+                <div>
+                  <label
+                    htmlFor="shippingStreet"
+                    className="block text-sm font-medium text-gray-700"
+                  >
+                    Rue
+                  </label>
+                  <input
+                    type="text"
+                    id="shippingStreet"
+                    value={shippingStreet || ""}
+                    onChange={handleShippingStreetChange}
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm"
+                  />
+                </div>
+
+                {/* Ville */}
+                <div>
+                  <label
+                    htmlFor="shippingCity"
+                    className="block text-sm font-medium text-gray-700"
+                  >
+                    Ville
+                  </label>
+                  <input
+                    type="text"
+                    id="shippingCity"
+                    value={shippingCity || ""}
+                    onChange={handleShippingCityChange}
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm"
+                  />
+                </div>
+
+                {/* Code Postal */}
+                <div>
+                  <label
+                    htmlFor="shippingZip"
+                    className="block text-sm font-medium text-gray-700"
+                  >
+                    Code Postal
+                  </label>
+                  <input
+                    type="text"
+                    id="shippingZip"
+                    value={shippingZip || ""}
+                    onChange={handleShippingZipChange}
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm"
+                  />
+                </div>
+
+                {/* Mode de paiement */}
+                <div>
+                  <label
+                    htmlFor="paymentMethod"
+                    className="block text-sm font-medium text-gray-700"
+                  >
+                    Mode de paiement
+                  </label>
+                  <select
+                    id="paymentMethod"
+                    value={paymentMethod}
+                    onChange={handlePaymentMethodChange}
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm"
+                  >
+                    {/* Options de paiement */}
+                    {Object.values(PaymentMethod).map((method) => (
+                      <option key={method} value={method}>
+                        {method}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       ) : (
-        <div className="py-10 flex flex-col gap-1 items-center justify-center">
-          <p className="text-lg font-bold">Your cart is empty</p>
-          <Link href={"/"} className="text-sm uppercase font-semibold underline underline-offset-2 hover:text-green-800 duration-200 cursor-pointer">
-            Return to shop
-          </Link>
+        // Message si le panier est vide
+        <div className="text-center py-12">
+          <h2 className="text-xl font-semibold mb=4">Votre panier est vide</h2>
+          <p>Ajoutez des articles à votre panier pour commencer vos achats.</p>
         </div>
       )}
-      <Toaster position="bottom-right" toastOptions={{ style: { background: "#166534", color: "#fff" } }} />
-    </>
+    </div>
   );
 };
 
 export default Cart;
-

@@ -1,0 +1,61 @@
+
+.card {
+    border: 1px solid var(--color-secondary);
+    border-radius: 8px;
+    transition: transform 0.2s;
+}
+
+.card:hover {
+    transform: scale(1.05);
+}
+
+.price {
+    color: var(--color-olive-dark);
+    font-weight: bold;
+}
+
+.button {
+    background-color: var(--color-olive-dark);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 0.375rem;
+    transition: background-color 0.3s;
+}
+
+.button:hover {
+    background-color: var(--color-secondary-light);
+}
+
+.text-custom-color {
+   color: var(--color-olive-dark)
+  }
+  
+.buttons {
+    background-color: var(--color-olive-dark);
+    color: white;
+    padding: 0.10rem 0.75rem;
+    font-size: 0.875rem; 
+    border-radius: 0.25rem; 
+    border: 1px solid var(--color-secondary);
+    transition: background-color 0.3s, transform 0.2s;
+}
+
+.buttons:hover {
+    background-color: var(--color-secondary-light);
+    transform: translateY(-2px); 
+}
+
+.favoriteButton {
+    background-color: white;
+    color: var(--color-olive-dark);
+    padding: 0.5rem 1rem;
+    border-radius: 0.375rem;
+    border: 1px solid var(--color-olive-dark);
+    transition: background-color 0.3s, transform 0.2s;
+}
+
+.favoriteButton:hover {
+    background-color: var(--color-olive-dark);
+    color: white;
+    transform: translateY(-2px); 
+}

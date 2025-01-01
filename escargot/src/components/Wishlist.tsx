@@ -15,22 +15,22 @@ const Wishlist = () => {
 
   const handleReset = () => {
     const confirmReset = window.confirm(
-      "Are you sure you want to reset your wishlist?"
+      "Êtes-vous sûr de vouloir réinitialiser votre liste de souhaits ?"
     );
     if (confirmReset) {
       clearFavorites();
-      toast.success("Wishlist successfully reset");
+      toast.success("Liste de souhaits réinitialisée avec succès");
       router.push("/");
     }
   };
 
   const handleAddToCart = (item: ProductType) => {
     addToCart(item);
-    toast.success(`${item.name} has been added to your cart!`);
+    toast.success(`${item.name} a été ajouté à votre panier !`);
   };
 
   if (!favorites) {
-    return <div>Loading...</div>;
+    return <div>Chargement...</div>;
   }
 
   return (
@@ -42,10 +42,10 @@ const Wishlist = () => {
               <thead className="text-xs text-white uppercase bg-green-600">
                 <tr>
                   <th scope="col" className="px-6 py-3">
-                    Product Information
+                    Information Produit
                   </th>
                   <th scope="col" className="px-6 py-3">
-                    Unit Price
+                    Prix Unitaire
                   </th>
                   <th scope="col" className="px-6 py-3">
                     Actions
@@ -63,14 +63,14 @@ const Wishlist = () => {
                         onClick={() => {
                           toggleFavorite(item);
                           toast.success(
-                            `${item.name} has been removed from the wishlist!`
+                            `${item.name} a été retiré de la liste de souhaits !`
                           );
                         }}
                         className="w-4 h-4 hover:text-red-600 cursor-pointer duration-200"
                       />
                       <Image
                         src={`${process.env.NEXT_PUBLIC_NEST_API_URL}/${item.imagePath}`}
-                        alt="product image"
+                        alt="image du produit"
                         width={500}
                         height={500}
                         className="w-24 object-contain"
@@ -89,18 +89,18 @@ const Wishlist = () => {
                           className="bg-green-600 text-white py-1 px-3 rounded-md hover:bg-green-700 duration-200 flex items-center gap-1"
                         >
                           <ShoppingCart size={16} />
-                          Add to Cart
+                          Ajouter au Panier
                         </button>
                         <button
                           onClick={() => {
                             toggleFavorite(item);
                             toast.success(
-                              `${item.name} has been removed from the wishlist!`
+                              `${item.name} a été retiré de la liste de souhaits !`
                             );
                           }}
                           className="bg-red-500 text-white py-1 px-3 rounded-md hover:bg-red-700 duration-200"
                         >
-                          Remove
+                          Retirer
                         </button>
                       </div>
                     </td>
@@ -113,7 +113,7 @@ const Wishlist = () => {
             onClick={handleReset}
             className="bg-green-600 text-white w-36 py-3 mt-5 rounded-md uppercase text-xs font-semibold hover:bg-red-700 hover:text-white duration-200"
           >
-            Clear Wishlist
+            Vider la Liste
           </button>
           <Toaster
             position="bottom-right"
@@ -127,12 +127,12 @@ const Wishlist = () => {
         </div>
       ) : (
         <div className="py-10 flex flex-col gap-1 items-center justify-center">
-          <p className="text-lg font-bold">Your wishlist is empty</p>
+          <p className="text-lg font-bold">Votre liste de souhaits est vide</p>
           <Link
             href={"/"}
             className="text-sm uppercase font-semibold underline underline-offset-2 hover:text-green-600 duration-200 cursor-pointer"
           >
-            Return to shop
+            Retourner à la boutique
           </Link>
         </div>
       )}

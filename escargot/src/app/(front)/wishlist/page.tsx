@@ -6,8 +6,8 @@ import Wishlist from "@/components/Wishlist";
 
 const WishlistPage = () => {
   return (
-    <Container>
-      <Title title="Your Wishlist" />
+    <Container className="px-4 sm:px-6 lg:px-8 py-10">
+      <Title title="Votre Liste de Souhaits" className="text-3xl font-bold text-center mb-8" />
       <Wishlist />
     </Container>
   );

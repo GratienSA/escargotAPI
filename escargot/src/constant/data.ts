@@ -1,8 +1,37 @@
-export const navigation = [
-  { _id: 0, title: "Home", href: "/allProducts" },
-  { _id: 1, title: "Fresh Snails", href: "/fresh-snails", categoryId: 1 },
-  { _id: 2, title: "Prepared Snails", href: "/prepared-snails", categoryId: 2 },
-  { _id: 3, title: "Culinary Specialties", href: "/culinary-specialties", categoryId: 3 },
-  { _id: 4, title: "Accessories", href: "/accessories", categoryId: 4 },
-  { _id: 5, title: "Gourmet Boxes", href: "/gourmet-boxes", categoryId: 5 },
-];
+import { getCategories } from "@/helpers/getData";
+
+interface NavigationItem {
+  _id: number;
+  name: string;
+  href: string;
+}
+
+export const generateNavigation = async (): Promise<NavigationItem[]> => {
+  const navigation: NavigationItem[] = [
+    { _id: 20, name: "Accueil", href: "/allProducts" }, 
+  ];
+
+  try {
+    const result = await getCategories();
+    const categories = result.categories; 
+    console.log("Catégories récupérées:", categories);
+
+    const dynamicNavigation = categories.map((category: { id: number; name: string }) => {
+      const item = {
+        _id: category.id,
+        name: category.name,
+        href: `/${category.name.toLowerCase().replace(/\s+/g, "-")}`,
+      };
+      console.log("Item de navigation créé:", item);
+      return item;
+    });
+
+    const fullNavigation = [...navigation, ...dynamicNavigation];
+    console.log("Navigation complète:", fullNavigation);
+    return fullNavigation;
+  } catch (error) {
+    console.error("Erreur lors de la récupération des catégories:", error);
+    return navigation; 
+  }
+};
+

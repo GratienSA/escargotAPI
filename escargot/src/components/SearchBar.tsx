@@ -46,7 +46,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ query }) => {
 
   return (
     <div className="container mx-auto px-4">
-      <h1 className="text-3xl font-bold mb-4 text-center">Best Suggestions for "{query}"</h1>
+      <h1 className="text-3xl font-bold mb-4 text-center">Meilleures suggestions pour  "{query}"</h1>
       <Product products={searchResults.products} />
       {searchResults.totalPages > 1 && (
         <Pagination 

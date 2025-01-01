@@ -8,42 +8,37 @@ import { ProductType } from "@/utils/types";
 import Image from "next/image";
 import { useStore } from "@/stores/store";
 import { toast } from "react-hot-toast";
+import styles from '@/components/Product.module.css';
 
-const ProductPage = ({params}: {params:any}) => {
-  console.log(params)
- const id = params._id;
+const ProductPage = ({ params }: { params: { _id: string } }) => {
+  const id = params._id;
   const [product, setProduct] = useState<ProductType | null>(null);
   const [loading, setLoading] = useState(true);
   const { addToCart, toggleFavorite, favorites } = useStore();
-  const fetchProduct = async () => {
-    console.log({id})
 
+  const fetchProduct = async () => {
     if (id && !Array.isArray(id)) {
       try {
         setLoading(true);
-        console.log('Fetching product with ID:', id);
         const data = await getProductById(Number(id));
-        console.log('Product fetched:', data);
         setProduct(data);
       } catch (error) {
-        console.error("Failed to fetch product:", error);
-        toast.error("Failed to load product. Please try again.");
+        console.error("Échec du chargement du produit:", error);
+        toast.error("Échec du chargement du produit. Veuillez réessayer.");
       } finally {
         setLoading(false);
       }
     }
   };
 
-
   useEffect(() => {
-   
     fetchProduct();
-  }, []);
+  }, [id]);
 
   const handleAddToCart = useCallback(() => {
     if (product) {
       addToCart(product);
-      toast.success(`${product.name} added to cart!`);
+      toast.success(`${product.name} ajouté au panier !`);
     }
   }, [product, addToCart]);
 
@@ -51,30 +46,39 @@ const ProductPage = ({params}: {params:any}) => {
     if (product) {
       toggleFavorite(product);
       if (favorites.some(fav => fav.id === product.id)) {
-        toast.success(`${product.name} added to favorites!`);
+        toast.success(`${product.name} retiré des favoris !`);
       } else {
-        toast.success(`${product.name} removed from favorites!`);
+        toast.success(`${product.name} ajouté aux favoris !`);
       }
     }
   }, [product, toggleFavorite, favorites]);
 
   if (loading) {
-    return <Container className="flex items-center justify-center h-screen">Loading...</Container>;
+    return <Container className="flex items-center justify-center h-screen">Chargement...</Container>;
   }
 
   if (!product) {
     return (
       <Container className="flex items-center justify-center h-screen">
-        <p>Product not found.</p>
+        <p>Produit non trouvé.</p>
       </Container>
     );
   }
+
+  const obtenirUrlImage = (imagePath: string) => {
+    if (!imagePath) return "/placeholder.jpg"; 
+    return imagePath.startsWith("http")
+      ? imagePath
+      : `https://res.cloudinary.com/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload/${imagePath}`; 
+  };
+
+  const imageUrl = obtenirUrlImage(product.imagePath);
 
   return (
     <Container className="flex items-center flex-col md:flex-row px-4 xl:px-0 py-10">
       <div className="w-full md:w-1/2 overflow-hidden bg-zinc-50 flex items-center justify-center p-10">
         <Image
-          src={`${process.env.NEXT_PUBLIC_NEST_API_URL}/${product.imagePath}`}
+          src={imageUrl}
           alt={product.name}
           width={500}
           height={500}
@@ -82,26 +86,31 @@ const ProductPage = ({params}: {params:any}) => {
         />
       </div>
       <div className="w-full md:w-1/2 flex flex-col gap-4 mt-6 md:mt-0 md:pl-10">
-        <h2 className="text-3xl font-semibold">{product.name}</h2>
+        <h2 className="text-3xl font-semibold" style={{ color: 'var(--color-primary)' }}>{product.name}</h2>
         <p className="flex items-center gap-10">
-          <FormattedPrice amount={product.price} className="text-2xl font-semibold text-green-600" />
+          <FormattedPrice amount={product.price} className={`text-2xl font-semibold ${styles.textCustomColor}`} />
         </p>
         <button 
           onClick={handleAddToCart}
-          className="bg-green-600 text-white px-6 py-3 font-medium rounded-md hover:bg-green-700 cursor-pointer duration-200 hover:shadow-lg w-full md:w-48"
+          className={`${styles.button} w-full md:w-auto`}
         >
-          Add to Cart
+          Ajouter au panier
         </button>
         <button 
           onClick={handleToggleFavorite}
-          className="bg-gray-200 text-gray-800 px-6 py-3 font-medium rounded-md hover:bg-gray-300 cursor-pointer duration-200 hover:shadow-lg w-full md:w-48"
+          className={`${styles.favoriteButton} w-full md:w-auto`}
         >
-          {favorites.some(fav => fav.id === product.id) ? 'Remove from Favorites' : 'Add to Favorites'}
+          {favorites.some(fav => fav.id === product.id) ? 'Retirer des favoris' : 'Ajouter aux favoris'}
         </button>
         <p>
-          Category: <span className="font-semibold">{product.category.name}</span>
+          Catégorie : <span className="font-semibold">{product.category.name}</span>
         </p>
-        <p className="text-gray-600">{product.description}</p>
+        {/* Description divisée en paragraphes */}
+        <div className={`${styles.description}`}>
+          {product.description.split("\n").map((paragraph, index) => (
+            <p key={index} className="mb-4">{paragraph}</p>
+          ))}
+        </div>
       </div>
     </Container>
   );

@@ -26,8 +26,8 @@ const ProfilePage: React.FC = () => {
       setUser(profile);
       setIsAuthenticated(true);
     } catch (error) {
-      console.error("Failed to fetch user profile:", error);
-      setError("Failed to load user profile. Please try again.");
+      console.error("Échec du chargement du profil utilisateur :", error);
+      setError("Échec du chargement du profil utilisateur. Veuillez réessayer.");
       setIsAuthenticated(false);
     } finally {
       setIsLoading(false);
@@ -61,8 +61,8 @@ const ProfilePage: React.FC = () => {
       setUser(updatedProfile);
       setIsEditing(false);
     } catch (error) {
-      console.error("Error updating user profile:", error);
-      setError("Failed to update profile. Please try again.");
+      console.error("Erreur lors de la mise à jour du profil utilisateur :", error);
+      setError("Échec de la mise à jour du profil. Veuillez réessayer.");
     } finally {
       setIsLoading(false);
     }
@@ -82,12 +82,12 @@ const ProfilePage: React.FC = () => {
     return (
       <Container>
         <div className="text-center">
-          <p className="text-red-500">You are not authenticated. Please log in.</p>
+          <p className="text-red-500">Vous n'êtes pas authentifié. Veuillez vous connecter.</p>
           <button
             onClick={() => router.push("/login")}
             className="mt-4 bg-blue-500 text-white px-4 py-2 rounded"
           >
-            Go to Login
+            Aller à la connexion
           </button>
         </div>
       </Container>
@@ -96,7 +96,7 @@ const ProfilePage: React.FC = () => {
 
   return (
     <Container>
-      <h1 className="text-3xl font-bold mb-8">My Account</h1>
+      <h1 className="text-3xl font-bold mb-8">Mon Compte</h1>
       {error && <div className="text-red-500 mb-4">{error}</div>}
       {isEditing && user ? (
         <EditProfileForm user={user} onSave={handleSave} onCancel={handleCancel} />

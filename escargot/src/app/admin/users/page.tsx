@@ -1,6 +1,8 @@
 "use client"
 
-import { useState, useEffect } from "react";
+import DeleteDialog from '@/components/shared/delete-dialog'
+import Pagination from '@/components/shared/pagination'
+import { Button } from '@/components/ui/button'
 import {
   Table,
   TableBody,
@@ -8,115 +10,87 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { PageHeader } from "@/components/admin/Header";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { MoreVertical } from "lucide-react";
-import { UserType } from "@/utils/types";
-import Image from "next/image";
-import toast from "react-hot-toast";
-import { getAllUsers } from "@/helpers/auth";
-import { DeleteDropDownItem } from "@/components/admin/DeleteUser";
+} from '@/components/ui/table'
+import { deleteUser, getAllUsers } from '@/helpers/auth'
 
-export default function UsersPage() {
-  const [users, setUsers] = useState<UserType[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+import { useState, useEffect } from 'react'
+import Link from 'next/link'
+
+export default function AdminUser({
+  searchParams,
+}: {
+  searchParams: { page: string }
+}) {
+  const page = Number(searchParams.page) || 1
+  const [users, setUsers] = useState<{ data: any[]; totalPages: number }>({ data: [], totalPages: 0 });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    async function fetchUsers() {
-      setIsLoading(true);
+    const fetchUsers = async () => {
       try {
-        const data = await getAllUsers();
-        setUsers(data);
+        const fetchedUsers = await getAllUsers({ page });
+        setUsers(fetchedUsers);
       } catch (error) {
-        console.error("Failed to fetch users:", error);
-        toast.error("Failed to load users. Please try again later.");
+        console.error('Failed to fetch users:', error);
+        setError('Erreur lors de la récupération des utilisateurs.');
+        setUsers({ data: [], totalPages: 0 }); 
       } finally {
-        setIsLoading(false);
+        setLoading(false);
       }
-    }
+    };
 
     fetchUsers();
-  }, []);
+  }, [page]);
+
+  if (loading) {
+    return <div>Chargement...</div>; 
+  }
 
   return (
-    <>
-      <PageHeader>Customers</PageHeader>
-      {isLoading ? (
-        <p>Loading users...</p>
-      ) : (
-        <UsersTable users={users} />
-      )}
-    </>
-  );
-}
+    <div className="space-y-2">
+      <h1 className="h2-bold">Users</h1>
+      {error && <div className="text-red-500">{error}</div>} 
 
-function UsersTable({ users }: { users: UserType[] }) {
-  if (users.length === 0) return <p>No customers found</p>;
+      <div>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>ID</TableHead>
+              <TableHead>Name</TableHead>
+              <TableHead>Email</TableHead>
+              <TableHead>Role</TableHead>
+              <TableHead>Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {users.data.length > 0 ? (
+              users.data.map((user) => (
+                <TableRow key={user.id}>
+                  <TableCell>{user.id}</TableCell>
+                  <TableCell>{user.firstName} {user.lastName}</TableCell>
+                  <TableCell>{user.email}</TableCell>
+                  <TableCell>{user.role}</TableCell>
+                  <TableCell className="flex gap-1">
+                    <Button asChild variant="outline" size="sm">
+                      <Link href={`/admin/users/${user.id}`}>Edit</Link>
+                    </Button>
+                    <DeleteDialog id={user.id} action={deleteUser} />
+                  </TableCell>
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={5} className="text-center">Aucun utilisateur trouvé.</TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
 
-
-  const formatDate = (date: Date | string | null): string => {
-    if (!date) return 'Never';
-    if (typeof date === 'string') return date;
-    return new Date(date).toLocaleString();
-  };
-
-  return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Picture</TableHead>
-          <TableHead>Name</TableHead>
-          <TableHead>Email</TableHead>
-          <TableHead>Phone</TableHead>
-          <TableHead>City</TableHead>
-          <TableHead>Last Login</TableHead>
-          <TableHead>Status</TableHead>
-          <TableHead className="w-0">
-            <span className="sr-only">Actions</span>
-          </TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {users.map((user) => (
-          <TableRow key={user.id}>
-            <TableCell>
-              {user.picture && (
-                <Image 
-                  src={user.picture} 
-                  alt={`${user.firstName} ${user.lastName}`} 
-                  width={40} 
-                  height={40} 
-                  className="rounded-full"
-                />
-              )}
-            </TableCell>
-            <TableCell>{`${user.firstName} ${user.lastName}`}</TableCell>
-            <TableCell>{user.email}</TableCell>
-            <TableCell>{user.phone}</TableCell>
-            <TableCell>{user.city}</TableCell>
-            <TableCell>{formatDate(user.lastLoginAt)}</TableCell>
-            <TableCell>{user.isActive ? 'Active' : 'Inactive'}</TableCell>
-            <TableCell className="text-center">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button className="h-8 w-8 p-0">
-                    <MoreVertical className="h-4 w-4" />
-                    <span className="sr-only">Actions</span>
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                  <DeleteDropDownItem id={user.id} />
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </TableCell>
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
-  );
+        {users.totalPages > 1 && (
+          <Pagination page={page} totalPages={users.totalPages} />
+        )}
+      </div>
+    </div>
+  )
 }

@@ -1,0 +1,33 @@
+.success-title {
+    color: var(--color-primary-dark); /* Couleur personnalisée pour le titre */
+    text-align: center;
+  }
+  
+  .success-text {
+    color: var(--color-secondary-dark); /* Couleur personnalisée pour le texte */
+    text-align: center;
+  }
+  
+  .success-button {
+    background-color: var(--color-primary); /* Couleur de fond du bouton */
+    color: white; /* Couleur du texte */
+    width: 14rem; /* Largeur du bouton */
+    height: 3rem; /* Hauteur du bouton */
+    border-radius: 9999px; /* Bouton arrondi */
+    font-weight: 600; /* Texte en semi-gras */
+    transition: background-color 0.3s ease;
+  }
+  
+  .success-button:hover {
+    background-color: var(--color-primary-dark); /* Couleur au survol */
+  }
+  
+  .secondary-button {
+    background-color: var(--color-gray-dark); /* Couleur de fond alternative */
+    color: white;
+  }
+  
+  .secondary-button:hover {
+    background-color: var(--color-gray-light); /* Couleur au survol alternative */
+  }
+  

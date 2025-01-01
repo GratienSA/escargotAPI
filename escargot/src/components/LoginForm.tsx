@@ -7,7 +7,6 @@ import { login } from '@/helpers/auth';
 import { loginSchema } from '@/validations/authSchemas';
 import { AuthProps, LoginResponse } from '@/utils/types';
 
-
 export const LoginForm: React.FC = () => {
   const { push } = useRouter();
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -41,7 +40,7 @@ export const LoginForm: React.FC = () => {
     <div className="flex min-h-full flex-1 flex-col justify-center px-6 py-12 lg:px-8 bg-white">
       <div className="sm:mx-auto sm:w-full sm:max-w-sm">
         <h2 className="mt-10 text-center text-2xl font-bold leading-9 tracking-tight text-gray-900">
-          Sign in to your account
+          Connectez-vous à votre compte
         </h2>
       </div>
 
@@ -49,7 +48,7 @@ export const LoginForm: React.FC = () => {
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           <div>
             <label htmlFor="email" className="block text-sm font-medium leading-6 text-gray-900">
-              Email address
+              Adresse e-mail
             </label>
             <div className="mt-2">
               <input
@@ -65,7 +64,7 @@ export const LoginForm: React.FC = () => {
 
           <div>
             <label htmlFor="password" className="block text-sm font-medium leading-6 text-gray-900">
-              Password
+              Mot de passe
             </label>
             <div className="mt-2">
               <input
@@ -87,13 +86,13 @@ export const LoginForm: React.FC = () => {
               isLoading ? 'bg-indigo-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-500'
             }`}
           >
-            {isLoading ? 'Signing in...' : 'Sign in'}
+            {isLoading ? 'Connexion en cours...' : 'Se connecter'}
           </button>
         </form>
         <p className="mt-10 text-center text-sm text-gray-500">
-          Not a member?{' '}
+          Pas encore membre ?{' '}
           <Link href="/register" className="font-semibold leading-6 text-indigo-600 hover:text-indigo-500">
-            Register now
+            Inscrivez-vous maintenant
           </Link>
         </p>
       </div>

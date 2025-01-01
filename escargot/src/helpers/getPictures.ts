@@ -31,5 +31,5 @@ export const uploadPicture = async (file: File, type: 'product' | 'profile', id?
 };
 
 export const getPictureUrl = (imagePath: string): string => {
-  return `${API_URL}/image/view/${imagePath}`;
+  return `${API_URL}/${imagePath}`;
 };

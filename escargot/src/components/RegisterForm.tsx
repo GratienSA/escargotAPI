@@ -2,12 +2,14 @@
 
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
+
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { registerToApi } from "@/helpers/auth";
-import { registerSchema } from "@/validations/authSchemas";
+
 import { RegisterFormData, RegisterProps } from "@/utils/types";
+import { registrationSchema } from "@/validations/authSchemas";
 
 const RegisterForm: React.FC = () => {
   const { push } = useRouter();
@@ -16,9 +18,9 @@ const RegisterForm: React.FC = () => {
 
   const { handleSubmit, register, formState: { errors } } = useForm<RegisterFormData>({
     mode: "onBlur",
-    resolver: yupResolver(registerSchema),
+    resolver: yupResolver<RegisterFormData>(registrationSchema),
   });
-
+  
   const onSubmit = async (data: RegisterFormData) => {
     setIsLoading(true);
     setError(null);
@@ -36,11 +38,6 @@ const RegisterForm: React.FC = () => {
   };
   return (
     <div className="flex min-h-full flex-1 flex-col justify-center px-6 py-12 lg:px-8 bg-white">
-      <div className="sm:mx-auto sm:w-full sm:max-w-sm">
-        <h2 className="mt-10 text-center text-2xl font-bold leading-9 tracking-tight text-gray-900">
-          Create an account
-        </h2>
-      </div>
 
       <div className="mt-10 sm:mx-auto sm:w-full sm:max-w-sm">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -49,7 +46,7 @@ const RegisterForm: React.FC = () => {
               htmlFor="firstName"
               className="block text-sm font-medium leading-6 text-gray-900"
             >
-              First Name
+              Prénom
             </label>
             <div className="mt-2">
               <input
@@ -69,7 +66,7 @@ const RegisterForm: React.FC = () => {
               htmlFor="lastName"
               className="block text-sm font-medium leading-6 text-gray-900"
             >
-              Last Name
+              Nom de Famille
             </label>
             <div className="mt-2">
               <input
@@ -89,7 +86,7 @@ const RegisterForm: React.FC = () => {
               htmlFor="address"
               className="block text-sm font-medium leading-6 text-gray-900"
             >
-              Address
+             Adresse
             </label>
             <div className="mt-2">
               <input
@@ -109,7 +106,7 @@ const RegisterForm: React.FC = () => {
               htmlFor="city"
               className="block text-sm font-medium leading-6 text-gray-900"
             >
-              City
+              Ville
             </label>
             <div className="mt-2">
               <input
@@ -149,7 +146,7 @@ const RegisterForm: React.FC = () => {
               htmlFor="country"
               className="block text-sm font-medium leading-6 text-gray-900"
             >
-              Country
+             Pays
             </label>
             <div className="mt-2">
               <input
@@ -169,7 +166,7 @@ const RegisterForm: React.FC = () => {
               htmlFor="phone"
               className="block text-sm font-medium leading-6 text-gray-900"
             >
-              Phone
+              Téléphone
             </label>
             <div className="mt-2">
               <input
@@ -209,7 +206,7 @@ const RegisterForm: React.FC = () => {
               htmlFor="password"
               className="block text-sm font-medium leading-6 text-gray-900"
             >
-              Password
+              Mot de passe
             </label>
             <div className="mt-2">
               <input
@@ -229,7 +226,7 @@ const RegisterForm: React.FC = () => {
               htmlFor="confirmPassword"
               className="block text-sm font-medium leading-6 text-gray-900"
             >
-              Confirm Password
+              Confirmer le mot de passe
             </label>
             <div className="mt-2">
               <input
@@ -251,7 +248,7 @@ const RegisterForm: React.FC = () => {
                 {...register("gdprConsent")}
                 className="mr-2 rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500"
               />
-              I agree to the GDPR terms and conditions
+              J'accepte les conditions générales et la politique de confidentialité RGPD
             </label>
             {errors.gdprConsent && (
               <p className="text-red-600">{errors.gdprConsent.message}</p>
@@ -268,16 +265,16 @@ const RegisterForm: React.FC = () => {
                 : "bg-indigo-600 hover:bg-indigo-500"
             }`}
           >
-            {isLoading ? "Signing up..." : "Sign up"}
+            {isLoading ? "Signing up..." : "S'inscrire"}
           </button>
         </form>
         <p className="mt-10 text-center text-sm text-gray-500">
-          Already have an account?{" "}
+        Vous avez déjà un compte ?{" "}
           <Link
             href="/login"
             className="font-semibold leading-6 text-indigo-600 hover:text-indigo-500"
           >
-            Sign in
+             Se connecter
           </Link>
         </p>
       </div>

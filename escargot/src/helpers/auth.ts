@@ -1,6 +1,6 @@
 import axios, { AxiosResponse } from 'axios';
 import { AuthProps, LoginResponse, RegisterProps, UserType } from '@/utils/types';
-
+import { paymentMethodSchema } from '@/validations/authSchemas';
 const API_URL = process.env.NEXT_PUBLIC_NEST_API_URL;
 
 const getAxiosConfig = (includeToken = false) => {
@@ -100,10 +100,11 @@ export async function updateUserProfile(updateData: Partial<UserType>): Promise<
   }
 }
 
-export async function deleteUser(id: number) {
+export async function deleteUser(id: number): Promise<{ success: boolean; message: number }> {
   const url = `${API_URL}/user/delete/${id}`;
   try {
     await axios.delete(url, getAxiosConfig());
+    return { success: true, message: id }; 
   } catch (error) {
     if (axios.isAxiosError(error)) {
       console.error('Error deleting user:', error.response?.data);
@@ -115,12 +116,12 @@ export async function deleteUser(id: number) {
   }
 }
 
-export async function getAllUsers(): Promise<UserType[]> {
-  const url = `${API_URL}/user/all`;
+export async function getAllUsers({ page = 1 }: { page?: number }): Promise<{ data: UserType[]; totalPages: number }> {
+  const url = `${API_URL}/user/all?page=${page}`; 
   
   try {
-    const response: AxiosResponse<UserType[]> = await axios.get(url, getAxiosConfig(true));
-    return response.data;
+    const response: AxiosResponse<{ data: UserType[]; totalPages: number }> = await axios.get(url, getAxiosConfig(true));
+    return response.data; 
   } catch (error) {
     if (axios.isAxiosError(error)) {
       console.error('Error fetching all users:', error.response?.data);
@@ -128,6 +129,59 @@ export async function getAllUsers(): Promise<UserType[]> {
     } else {
       console.error('Unexpected error:', error);
       throw new Error('An unexpected error occurred while fetching all users');
+    }
+  }
+}
+
+export async function getUserById(userId: number): Promise<UserType> {
+  const url = `${API_URL}/user/${userId}`;
+
+  try {
+    const response: AxiosResponse<UserType> = await axios.get(url, getAxiosConfig(true));
+    return response.data;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      console.error('Axios error:', error.response?.data);
+      throw new Error(error.response?.data?.message || 'Failed to fetch user');
+    } else {
+      console.error('Unexpected error:', error);
+      throw new Error('An unexpected error occurred while fetching user');
+    }
+  }
+}
+
+
+interface UpdatePaymentMethodResponse {
+  success: boolean;
+  message: string;
+}
+
+export async function updateUserPaymentMethod(userId: number, data: { type: string }): Promise<UpdatePaymentMethodResponse> {
+  const url = `${API_URL}/user/${userId}/payment-method`;
+
+  try {
+    await paymentMethodSchema.validate(data);
+
+    const response: AxiosResponse<UpdatePaymentMethodResponse> = await axios.put(
+      url, 
+      { paymentMethod: data.type },
+      getAxiosConfig(true)
+    );
+
+    return response.data;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      console.error('Axios error:', error.response?.data);
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Échec de la mise à jour de la méthode de paiement'
+      };
+    } else {
+      console.error('Unexpected error:', error);
+      return {
+        success: false,
+        message: 'Une erreur inattendue s\'est produite lors de la mise à jour de la méthode de paiement'
+      };
     }
   }
 }
