@@ -18,13 +18,27 @@ export default function DeleteDialog({
   id,
   action,
 }: {
-  id: number
-  // eslint-disable-next-line no-unused-vars
-  action: (id: number) => Promise<{ success: boolean; message: string }>
+  id: number;
+  action: (id: number) => Promise<{ success: boolean; message: string }>;
 }) {
   const [open, setOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
   const { toast } = useToast()
+
+  const handleDelete = async () => {
+    const res = await action(id);
+    if (!res.success) {
+      toast({
+        variant: 'destructive',
+        description: res.message,
+      })
+    } else {
+      setOpen(false)
+      toast({
+        description: res.message,
+      })
+    }
+  };
 
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
@@ -47,22 +61,7 @@ export default function DeleteDialog({
             variant="destructive"
             size="sm"
             disabled={isPending}
-            onClick={() =>
-              startTransition(async () => {
-                const res = await action(id)
-                if (!res.success) {
-                  toast({
-                    variant: 'destructive',
-                    description: res.message,
-                  })
-                } else {
-                  setOpen(false)
-                  toast({
-                    description: res.message,
-                  })
-                }
-              })
-            }
+            onClick={() => startTransition(handleDelete)}
           >
             {isPending ? 'Suppression...' : 'Supprimer'}
           </Button>
@@ -71,3 +70,4 @@ export default function DeleteDialog({
     </AlertDialog>
   )
 }
+

@@ -1,8 +1,8 @@
-"use client"
+"use client";
 
-import DeleteDialog from '@/components/shared/delete-dialog'
-import Pagination from '@/components/shared/pagination'
-import { Button } from '@/components/ui/button'
+import DeleteDialog from "@/components/shared/delete-dialog";
+import Pagination from "@/components/shared/pagination";
+import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -10,19 +10,22 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table'
-import { deleteUser, getAllUsers } from '@/helpers/auth'
+} from "@/components/ui/table";
+import { deleteUser, getAllUsers } from "@/helpers/auth";
 
-import { useState, useEffect } from 'react'
-import Link from 'next/link'
+import { useState, useEffect } from "react";
+import Link from "next/link";
 
 export default function AdminUser({
   searchParams,
 }: {
-  searchParams: { page: string }
+  searchParams: { page: string };
 }) {
-  const page = Number(searchParams.page) || 1
-  const [users, setUsers] = useState<{ data: any[]; totalPages: number }>({ data: [], totalPages: 0 });
+  const page = Number(searchParams.page) || 1;
+  const [users, setUsers] = useState<{ data: any[]; totalPages: number }>({
+    data: [],
+    totalPages: 0,
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -32,9 +35,9 @@ export default function AdminUser({
         const fetchedUsers = await getAllUsers({ page });
         setUsers(fetchedUsers);
       } catch (error) {
-        console.error('Failed to fetch users:', error);
-        setError('Erreur lors de la récupération des utilisateurs.');
-        setUsers({ data: [], totalPages: 0 }); 
+        console.error("Failed to fetch users:", error);
+        setError("Erreur lors de la récupération des utilisateurs.");
+        setUsers({ data: [], totalPages: 0 });
       } finally {
         setLoading(false);
       }
@@ -44,13 +47,13 @@ export default function AdminUser({
   }, [page]);
 
   if (loading) {
-    return <div>Chargement...</div>; 
+    return <div>Chargement...</div>;
   }
 
   return (
     <div className="space-y-2">
       <h1 className="h2-bold">Users</h1>
-      {error && <div className="text-red-500">{error}</div>} 
+      {error && <div className="text-red-500">{error}</div>}
 
       <div>
         <Table>
@@ -68,20 +71,33 @@ export default function AdminUser({
               users.data.map((user) => (
                 <TableRow key={user.id}>
                   <TableCell>{user.id}</TableCell>
-                  <TableCell>{user.firstName} {user.lastName}</TableCell>
+                  <TableCell>
+                    {user.firstName} {user.lastName}
+                  </TableCell>
                   <TableCell>{user.email}</TableCell>
                   <TableCell>{user.role}</TableCell>
                   <TableCell className="flex gap-1">
                     <Button asChild variant="outline" size="sm">
                       <Link href={`/admin/users/${user.id}`}>Edit</Link>
                     </Button>
-                    <DeleteDialog id={user.id} action={deleteUser} />
+                    <DeleteDialog
+                      id={user.id}
+                      action={async (id) => {
+                        const result = await deleteUser(id);
+                        return {
+                          success: result.success,
+                          message: `L'utilisateur avec l'ID ${result.message} a été supprimé.`,
+                        };
+                      }}
+                    />
                   </TableCell>
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={5} className="text-center">Aucun utilisateur trouvé.</TableCell>
+                <TableCell colSpan={5} className="text-center">
+                  Aucun utilisateur trouvé.
+                </TableCell>
               </TableRow>
             )}
           </TableBody>
@@ -92,5 +108,5 @@ export default function AdminUser({
         )}
       </div>
     </div>
-  )
+  );
 }

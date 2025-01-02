@@ -1,6 +1,6 @@
 import Image from 'next/image'
 import Link from 'next/link'
-import Menu from './menu'
+
 
 import {
   Drawer,
@@ -64,7 +64,6 @@ const Header = async () => {
         <div className="hidden md:block">
           <Search />
         </div>
-        <Menu />
       </div>
       <div className="md:hidden block   px-5 pb-2">
         <Search />

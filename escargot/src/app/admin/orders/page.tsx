@@ -79,7 +79,7 @@ export default function OrdersPage({
               <TableRow key={order.id}>
                 <TableCell>{(order.id)}</TableCell>
                 <TableCell>{formatDateTime(order.createdAt).dateTime}</TableCell>
-                <TableCell>{order.user ? order.user.firstName : 'Utilisateur supprimé'}</TableCell>
+                <TableCell>{order.userId ? order.userId: 'Utilisateur supprimé'}</TableCell>
                 <TableCell>{formatCurrency(order.totalAmount)}</TableCell>
                 <TableCell>{order.isPaid && order.paidAt ? formatDateTime(order.paidAt).dateTime : 'non payé'}</TableCell>
                 <TableCell>{order.isDelivered && order.deliveredAt ? formatDateTime(order.deliveredAt).dateTime : 'non livré'}</TableCell>

@@ -1,4 +1,5 @@
-import { APP_NAME } from '@/lib/constants'
+import { APP_NAME } from "@/lib/constants/index"
+
 
 const Footer = () => {
   return (

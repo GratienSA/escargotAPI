@@ -3,7 +3,6 @@ import Image from 'next/image'
 import Link from 'next/link'
 import React from 'react'
 import MainNav from './main-nav'
-import Menu from '@/components/shared/header/menu'
 import { APP_NAME } from '@/lib/constants/index'
 
 export default async function UserDashboardLayout({
@@ -25,9 +24,6 @@ export default async function UserDashboardLayout({
               />
             </Link>
             <MainNav className="mx-6" />
-            <div className="ml-auto flex items-center space-x-4">
-              <Menu />
-            </div>
           </div>
         </div>
         <div className="flex-1 space-y-4 p-8 pt-6">{children}</div>

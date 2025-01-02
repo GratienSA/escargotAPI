@@ -16,8 +16,8 @@ const ProfileInfo: React.FC<ProfileInfoProps> = ({ user, onEdit }) => {
     setImageError(true);
   };
 
-  const profileImageSrc = user.picture && !imageError
-    ? getPictureUrl(user.picture)
+  const profileImageSrc = user.profileImagePath && !imageError
+    ? getPictureUrl(user.profileImagePath)
     : "/default-avatar.png";
 
   return (

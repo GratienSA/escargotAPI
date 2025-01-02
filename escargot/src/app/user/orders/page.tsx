@@ -30,7 +30,7 @@ export default async function OrdersPage({
     return <div>Veuillez vous connecter pour voir vos commandes.</div>;
   }
 
-  const ordersResponse = await getMyOrders(Number(userId), page, 6);
+  const ordersResponse = await getMyOrders();
   
   return (
     <div className="space-y-2">

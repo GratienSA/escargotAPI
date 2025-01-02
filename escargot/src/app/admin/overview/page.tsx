@@ -1,6 +1,6 @@
 "use client";
 
-// DashboardPage.tsx
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { BadgeDollarSign, Barcode, CreditCard, Users } from 'lucide-react';
 import { deleteOrder, getOrderSummary } from '@/helpers/getData';
@@ -14,13 +14,11 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import Link from 'next/link';
-import { formatCurrency, formatDateTime, formatNumber, OrderType } from '@/utils/types';
+import { formatCurrency, formatDateTime, formatNumber, OrderType, SummaryType } from '@/utils/types';
 import DeleteDialog from '@/components/shared/delete-dialog';
 
-export default async function DashboardPage() {
-  // Fetch the order summary on the server side
-  const summary = await getOrderSummary();
 
+function DashboardContent({ summary }: { summary: SummaryType }) {
   return (
     <div className="space-y-4">
       <h1 className="h2-bold">Tableau de bord</h1>
@@ -59,7 +57,6 @@ export default async function DashboardPage() {
             </div>
           </CardContent>
         </Card>
-
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Produits</CardTitle>
@@ -87,13 +84,11 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Section pour les ventes récentes */}
         <Card className="col-span-3">
           <CardHeader>
             <CardTitle>Ventes récentes</CardTitle>
           </CardHeader>
           <CardContent>
-            {/* Table pour afficher les ventes récentes */}
             <Table>
               <TableHeader>
                 <TableRow>
@@ -106,19 +101,13 @@ export default async function DashboardPage() {
               <TableBody>
                 {summary.latestOrders.map((order: OrderType) => (
                   <TableRow key={order.id}>
-                    {/* Affichage des détails de la commande */}
                     <TableCell>{order.userId ? order.userId : 'Utilisateur supprimé'}</TableCell>
-
                     <TableCell>{formatDateTime(order.createdAt).dateOnly}</TableCell>
-
                     <TableCell>{formatCurrency(order.totalAmount)}</TableCell>
-
-                    {/* Lien vers les détails de la commande */}
                     <TableCell>
                       <Link href={`/order/${order.id}`}>
                         <span className="px-2">Détails</span>
                       </Link>
-                      {/* Delete dialog for removing orders */}
                       <DeleteDialog id={order.id} action={() => deleteOrder(order.id)} />
                     </TableCell>
                   </TableRow>
@@ -127,9 +116,37 @@ export default async function DashboardPage() {
             </Table>
           </CardContent>
         </Card>
-
       </div>
-
     </div>
   );
 }
+
+export default function DashboardPage() {
+  const [summary, setSummary] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+
+  useEffect(() => {
+    async function fetchSummary() {
+      try {
+        const data = await getOrderSummary();
+        setSummary(data);
+      } catch (err) {
+        setError('Erreur lors de la récupération du résumé des commandes');
+        console.error(err);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchSummary();
+  }, []);
+
+  if (isLoading) return <div>Chargement...</div>;
+  if (error) return <div>Erreur : {error}</div>;
+  if (!summary) return <div>Aucune donnée disponible</div>;
+
+  return <DashboardContent summary={summary} />;
+}
+

@@ -389,3 +389,13 @@ export type ProductType = {
   rating: number | null;
   averageRating?: number | null;
 };
+
+
+export interface SummaryType {
+  ordersPrice: number;
+  ordersCount: number;
+  usersCount: number;
+  productsCount: number;
+  salesData: any;
+  latestOrders: OrderType[]; 
+}

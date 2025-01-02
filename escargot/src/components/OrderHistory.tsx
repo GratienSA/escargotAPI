@@ -13,7 +13,7 @@ const OrderHistory: React.FC<OrderHistoryProps> = ({ userId }) => {
   useEffect(() => {
     const fetchOrders = async () => {
       try {
-        const orderHistory = await getOrderHistory(userId);
+        const orderHistory = await getOrderHistory();
         setOrders(orderHistory);
       } catch (error) {
         console.error('Error fetching order history:', error);
